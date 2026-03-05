@@ -4,6 +4,7 @@ import com.example.back_end.model.ContratReference;
 import com.example.back_end.repository.ContratReferenceRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
@@ -19,6 +20,8 @@ public class ContratReferenceService {
     }
 
     public ContratReference create(ContratReference request) {
+        validateUniqueNumeroContrat(request.getNumeroContrat(), null);
+
         ContratReference contrat = new ContratReference();
         applyEditableFields(contrat, request);
         contrat.setStatut(calculateStatut(contrat.getDateFinContrat()));
@@ -28,6 +31,8 @@ public class ContratReferenceService {
     public ContratReference update(String id, ContratReference request) {
         ContratReference contrat = contratReferenceRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Contrat not found"));
+
+        validateUniqueNumeroContrat(request.getNumeroContrat(), id);
 
         applyEditableFields(contrat, request);
         contrat.setStatut(calculateStatut(contrat.getDateFinContrat()));
@@ -84,5 +89,19 @@ public class ContratReferenceService {
             return "DESACTIVE";
         }
         return !dateFinContrat.isBefore(LocalDate.now()) ? "ACTIF" : "DESACTIVE";
+    }
+
+    private void validateUniqueNumeroContrat(String numeroContrat, String currentContratId) {
+        if (!StringUtils.hasText(numeroContrat)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Numero contrat is required");
+        }
+
+        String normalizedNumeroContrat = numeroContrat.trim();
+        ContratReference existing = contratReferenceRepository.findByNumeroContrat(normalizedNumeroContrat)
+                .orElse(null);
+
+        if (existing != null && (currentContratId == null || !existing.getId().equals(currentContratId))) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Numero contrat already exists");
+        }
     }
 }

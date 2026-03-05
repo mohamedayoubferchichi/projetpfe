@@ -1,5 +1,6 @@
 package com.example.back_end.controller;
 
+import com.example.back_end.dto.AdminUtilisateurResponse;
 import com.example.back_end.dto.UtilisateurProfileResponse;
 import com.example.back_end.dto.UpdateUtilisateurRequest;
 import com.example.back_end.model.Utilisateur;
@@ -15,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/utilisateurs")
 public class UtilisateurController {
@@ -28,6 +31,11 @@ public class UtilisateurController {
     @GetMapping("/me")
     public UtilisateurProfileResponse me(Authentication authentication) {
         return utilisateurService.getProfileByEmail(authentication.getName());
+    }
+
+    @GetMapping
+    public List<AdminUtilisateurResponse> findAll() {
+        return utilisateurService.findAllForAdmin();
     }
 
     @PutMapping("/{id}")

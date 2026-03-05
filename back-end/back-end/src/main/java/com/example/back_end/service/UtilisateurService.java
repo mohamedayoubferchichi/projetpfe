@@ -1,5 +1,6 @@
 package com.example.back_end.service;
 
+import com.example.back_end.dto.AdminUtilisateurResponse;
 import com.example.back_end.dto.UtilisateurContratResponse;
 import com.example.back_end.dto.UtilisateurProfileResponse;
 import com.example.back_end.dto.UpdateUtilisateurRequest;
@@ -36,6 +37,12 @@ public class UtilisateurService {
         Utilisateur utilisateur = utilisateurRepository.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Utilisateur not found"));
         return toProfileResponse(utilisateur);
+    }
+
+    public List<AdminUtilisateurResponse> findAllForAdmin() {
+        return utilisateurRepository.findAll().stream()
+                .map(this::toAdminResponse)
+                .collect(Collectors.toList());
     }
 
     public Utilisateur update(String id, UpdateUtilisateurRequest request) {
@@ -90,6 +97,18 @@ public class UtilisateurService {
         response.setTypeContrat(contrat.getTypeContrat());
         response.setStatut(contrat.getStatut());
         response.setDateFinContrat(contrat.getDateFinContrat());
+        return response;
+    }
+
+    private AdminUtilisateurResponse toAdminResponse(Utilisateur utilisateur) {
+        AdminUtilisateurResponse response = new AdminUtilisateurResponse();
+        response.setId(utilisateur.getId());
+        response.setNom(utilisateur.getNom());
+        response.setEmail(utilisateur.getEmail());
+        response.setCin(utilisateur.getCin());
+        response.setNumeroContrat(utilisateur.getNumeroContrat());
+        response.setRole(utilisateur.getRole());
+        response.setStatutCompte(utilisateur.getStatutCompte());
         return response;
     }
 }

@@ -5,9 +5,11 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface ContratReferenceRepository extends MongoRepository<ContratReference, String> {
 	List<ContratReference> findByDateFinContratBeforeAndStatutNot(LocalDate date, String statut);
 	List<ContratReference> findByCinOrderByDateFinContratDesc(String cin);
+	Optional<ContratReference> findByNumeroContrat(String numeroContrat);
 	boolean existsByCinAndNumeroContrat(String cin, String numeroContrat);
 }
