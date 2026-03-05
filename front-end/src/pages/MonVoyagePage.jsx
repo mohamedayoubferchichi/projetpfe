@@ -1,0 +1,120 @@
+import { Link } from 'react-router-dom'
+
+const garanties = [
+  {
+    icon: '🌍',
+    title: 'Assistance internationale',
+    desc: 'Bénéficiez d’une assistance avant et pendant vos voyages à l’étranger.'
+  },
+  {
+    icon: '🩺',
+    title: 'Frais médicaux',
+    desc: 'Prise en charge des frais médicaux urgents durant votre séjour.'
+  },
+  {
+    icon: '🧳',
+    title: 'Bagages protégés',
+    desc: 'Couverture en cas de perte, vol ou retard de vos bagages.'
+  }
+]
+
+const services = [
+  {
+    title: 'Attestation rapide',
+    desc: 'Recevez votre attestation d’assurance voyage en quelques instants.',
+    img: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80'
+  },
+  {
+    title: 'Assistance santé',
+    desc: 'Un réseau d’assistance disponible pour orienter vos soins à l’étranger.',
+    img: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=1200&q=80'
+  },
+  {
+    title: 'Support 24/7',
+    desc: 'Contactez nos équipes jour et nuit pour une aide immédiate.',
+    img: 'https://images.unsplash.com/photo-1529070538774-1843cb3265df?auto=format&fit=crop&w=1200&q=80'
+  }
+]
+
+const chiffres = [
+  { value: '24/7', label: 'Assistance voyage' },
+  { value: '120+', label: 'Pays couverts' },
+  { value: '2h', label: 'Réponse initiale' },
+  { value: '96%', label: 'Satisfaction client' }
+]
+
+export default function MonVoyagePage() {
+  return (
+    <main>
+      <section className="section container products-section">
+        <p className="section-kicker">Mon voyage</p>
+        <h1 className="section-title">Voyagez sereinement avec AssurGo</h1>
+        <div className="news-block">
+          <img
+            src="https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=1400&q=80"
+            alt="Assurance voyage"
+          />
+          <div>
+            <p className="news-tag">Protection voyage</p>
+            <h4>Une assistance complète avant et pendant votre séjour</h4>
+            <p>Protégez vos déplacements avec des garanties adaptées à vos besoins de mobilité.</p>
+            <Link to="/creer-compte" className="nav-btn primary-btn devis-btn">
+              Demander un devis
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="section container">
+        <p className="section-kicker">Nos garanties</p>
+        <div className="product-grid">
+          {garanties.map((item) => (
+            <article className="product-card" key={item.title}>
+              <span className="product-icon">{item.icon}</span>
+              <h4>{item.title}</h4>
+              <p>{item.desc}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="section container">
+        <p className="section-kicker">Services voyage</p>
+        <h2 className="section-title">Des services utiles à chaque destination</h2>
+        <div className="demarche-grid">
+          {services.map((item) => (
+            <article className="demarche-card" key={item.title}>
+              <img src={item.img} alt={item.title} />
+              <div className="demarche-body">
+                <h4>{item.title}</h4>
+                <p>{item.desc}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="section section-alt">
+        <div className="container stats-layout">
+          <div>
+            <h2 className="section-title left">Obtenir mon attestation voyage</h2>
+            <p className="text-muted">
+              Accédez à vos documents et suivez vos demandes directement depuis votre espace client.
+            </p>
+            <Link to="/profile" className="nav-btn primary-btn">
+              Voir mon profil
+            </Link>
+          </div>
+          <div className="stats-grid-2">
+            {chiffres.map((item) => (
+              <article className="stat-box" key={item.label}>
+                <h4>{item.value}</h4>
+                <p>{item.label}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+    </main>
+  )
+}
