@@ -11,7 +11,17 @@ import MonVoyagePage from './pages/MonVoyagePage'
 import ProfilePage from './pages/ProfilePage'
 import RegisterPage from './pages/RegisterPage'
 
-const quickLinks = ['Assistance', 'Agences', 'Contact', 'Bulletin']
+import AssistancePage from './pages/AssistancePage'
+import AgencesPage from './pages/AgencesPage'
+import ContactPage from './pages/ContactPage'
+import BulletinPage from './pages/BulletinPage'
+
+const quickLinks = [
+  { label: 'Assistance', to: '/assistance' },
+  { label: 'Agences', to: '/agences' },
+  { label: 'Contact', to: '/contact' },
+  { label: 'Bulletin', to: '/bulletin' }
+]
 
 const navItems = [
   { label: 'Ma voiture', to: '/ma-voiture' },
@@ -92,7 +102,9 @@ export default function App() {
     <div className="page">
       <div className="right-floating">
         {quickLinks.map((item) => (
-          <button key={item}>{item}</button>
+          <Link key={item.label} to={item.to} style={{ display: 'contents' }}>
+            <button>{item.label}</button>
+          </Link>
         ))}
       </div>
       <header className="topbar">
@@ -145,6 +157,10 @@ export default function App() {
         <Route path="/mon-habitation" element={<MonHabitationPage />} />
         <Route path="/mon-voyage" element={<MonVoyagePage />} />
         <Route path="/ma-prevoyance" element={<MaPrevoyancePage />} />
+        <Route path="/assistance" element={<AssistancePage />} />
+        <Route path="/agences" element={<AgencesPage />} />
+        <Route path="/contact" element={<ContactPage />} />
+        <Route path="/bulletin" element={<BulletinPage />} />
         <Route
           path="/profile"
           element={

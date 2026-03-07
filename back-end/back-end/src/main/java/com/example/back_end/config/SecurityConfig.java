@@ -29,6 +29,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/contrats/**").hasRole("ADMIN")
+                    .requestMatchers("/api/contact-messages/admin/**").hasRole("ADMIN")
+                    .requestMatchers("/api/contact-messages/*/replies/**").hasAnyRole("UTILISATEUR", "ADMIN")
+                    .requestMatchers("/api/contact-messages/**").hasAnyRole("UTILISATEUR", "ADMIN")
                     .requestMatchers("/api/utilisateurs/me").hasAnyRole("UTILISATEUR", "ADMIN")
                     .requestMatchers("/api/utilisateurs/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
