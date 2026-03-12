@@ -5,6 +5,7 @@ import com.example.back_end.dto.UtilisateurContratResponse;
 import com.example.back_end.dto.UtilisateurProfileResponse;
 import com.example.back_end.dto.UpdateUtilisateurRequest;
 import com.example.back_end.model.ContratReference;
+import com.example.back_end.model.StatutCompte;
 import com.example.back_end.model.Utilisateur;
 import com.example.back_end.repository.ContratReferenceRepository;
 import com.example.back_end.repository.UtilisateurRepository;
@@ -14,8 +15,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,11 +40,13 @@ public class UtilisateurService {
     public UtilisateurProfileResponse getProfileByEmail(String email) {
         Utilisateur utilisateur = utilisateurRepository.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Utilisateur not found"));
+        utilisateur = synchronizeStatutCompte(utilisateur);
         return toProfileResponse(utilisateur);
     }
 
     public List<AdminUtilisateurResponse> findAllForAdmin() {
         return utilisateurRepository.findAll().stream()
+            .map(this::synchronizeStatutCompte)
                 .map(this::toAdminResponse)
                 .collect(Collectors.toList());
     }
@@ -53,12 +59,13 @@ public class UtilisateurService {
         utilisateur.setEmail(request.getEmail());
         utilisateur.setCin(request.getCin());
         utilisateur.setNumeroContrat(request.getNumeroContrat());
-        utilisateur.setStatutCompte(request.getStatutCompte());
         utilisateur.setRole("UTILISATEUR");
 
         if (request.getPassword() != null && !request.getPassword().isBlank()) {
             utilisateur.setPassword(passwordEncoder.encode(request.getPassword()));
         }
+
+        utilisateur.setStatutCompte(computeStatutCompteForCin(utilisateur.getCin()));
 
         return utilisateurRepository.save(utilisateur);
     }
@@ -68,6 +75,52 @@ public class UtilisateurService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Utilisateur not found");
         }
         utilisateurRepository.deleteById(id);
+    }
+
+    public void synchronizeStatutCompteByCin(String cin) {
+        if (!StringUtils.hasText(cin)) {
+            return;
+        }
+
+        String normalizedCin = cin.trim();
+        StatutCompte computedStatut = computeStatutCompteForCin(normalizedCin);
+
+        List<Utilisateur> utilisateurs = utilisateurRepository.findByCin(normalizedCin);
+        if (utilisateurs.isEmpty()) {
+            return;
+        }
+
+        List<Utilisateur> updates = new ArrayList<>();
+        for (Utilisateur utilisateur : utilisateurs) {
+            if (!Objects.equals(utilisateur.getStatutCompte(), computedStatut)) {
+                utilisateur.setStatutCompte(computedStatut);
+                updates.add(utilisateur);
+            }
+        }
+
+        if (!updates.isEmpty()) {
+            utilisateurRepository.saveAll(updates);
+        }
+    }
+
+    public void synchronizeAllStatutComptes() {
+        List<Utilisateur> utilisateurs = utilisateurRepository.findAll();
+        if (utilisateurs.isEmpty()) {
+            return;
+        }
+
+        List<Utilisateur> updates = new ArrayList<>();
+        for (Utilisateur utilisateur : utilisateurs) {
+            StatutCompte computedStatut = computeStatutCompteForCin(utilisateur.getCin());
+            if (!Objects.equals(utilisateur.getStatutCompte(), computedStatut)) {
+                utilisateur.setStatutCompte(computedStatut);
+                updates.add(utilisateur);
+            }
+        }
+
+        if (!updates.isEmpty()) {
+            utilisateurRepository.saveAll(updates);
+        }
     }
 
     private UtilisateurProfileResponse toProfileResponse(Utilisateur utilisateur) {
@@ -110,5 +163,27 @@ public class UtilisateurService {
         response.setRole(utilisateur.getRole());
         response.setStatutCompte(utilisateur.getStatutCompte());
         return response;
+    }
+
+    private Utilisateur synchronizeStatutCompte(Utilisateur utilisateur) {
+        StatutCompte computedStatut = computeStatutCompteForCin(utilisateur.getCin());
+
+        if (Objects.equals(utilisateur.getStatutCompte(), computedStatut)) {
+            return utilisateur;
+        }
+
+        utilisateur.setStatutCompte(computedStatut);
+        return utilisateurRepository.save(utilisateur);
+    }
+
+    private StatutCompte computeStatutCompteForCin(String cin) {
+        if (!StringUtils.hasText(cin)) {
+            return StatutCompte.NON_VERIFIE;
+        }
+
+        boolean hasAtLeastOneActiveContrat = contratReferenceRepository
+                .existsByCinAndDateFinContratGreaterThanEqual(cin.trim(), LocalDate.now());
+
+        return hasAtLeastOneActiveContrat ? StatutCompte.VERIFIE : StatutCompte.NON_VERIFIE;
     }
 }

@@ -14,9 +14,12 @@ import java.util.List;
 public class ContratReferenceService {
 
     private final ContratReferenceRepository contratReferenceRepository;
+    private final UtilisateurService utilisateurService;
 
-    public ContratReferenceService(ContratReferenceRepository contratReferenceRepository) {
+    public ContratReferenceService(ContratReferenceRepository contratReferenceRepository,
+                                   UtilisateurService utilisateurService) {
         this.contratReferenceRepository = contratReferenceRepository;
+        this.utilisateurService = utilisateurService;
     }
 
     public ContratReference create(ContratReference request) {
@@ -25,25 +28,35 @@ public class ContratReferenceService {
         ContratReference contrat = new ContratReference();
         applyEditableFields(contrat, request);
         contrat.setStatut(calculateStatut(contrat.getDateFinContrat()));
-        return contratReferenceRepository.save(contrat);
+        ContratReference savedContrat = contratReferenceRepository.save(contrat);
+        utilisateurService.synchronizeStatutCompteByCin(savedContrat.getCin());
+        return savedContrat;
     }
 
     public ContratReference update(String id, ContratReference request) {
         ContratReference contrat = contratReferenceRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Contrat not found"));
 
+        String previousCin = contrat.getCin();
+
         validateUniqueNumeroContrat(request.getNumeroContrat(), id);
 
         applyEditableFields(contrat, request);
         contrat.setStatut(calculateStatut(contrat.getDateFinContrat()));
-        return contratReferenceRepository.save(contrat);
+        ContratReference savedContrat = contratReferenceRepository.save(contrat);
+
+        utilisateurService.synchronizeStatutCompteByCin(previousCin);
+        utilisateurService.synchronizeStatutCompteByCin(savedContrat.getCin());
+
+        return savedContrat;
     }
 
     public void delete(String id) {
-        if (!contratReferenceRepository.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Contrat not found");
-        }
+        ContratReference contrat = contratReferenceRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Contrat not found"));
+
         contratReferenceRepository.deleteById(id);
+        utilisateurService.synchronizeStatutCompteByCin(contrat.getCin());
     }
 
     public ContratReference updateStatut(String id, String statut) {
@@ -55,7 +68,9 @@ public class ContratReferenceService {
         }
 
         contrat.setStatut(statut.trim().toUpperCase());
-        return contratReferenceRepository.save(contrat);
+        ContratReference savedContrat = contratReferenceRepository.save(contrat);
+        utilisateurService.synchronizeStatutCompteByCin(savedContrat.getCin());
+        return savedContrat;
     }
 
     public List<ContratReference> findAll() {
@@ -72,6 +87,11 @@ public class ContratReferenceService {
                 contrat.setStatut("DESACTIVE");
             }
             contratReferenceRepository.saveAll(expiredContrats);
+
+            expiredContrats.stream()
+                    .map(ContratReference::getCin)
+                    .distinct()
+                    .forEach(utilisateurService::synchronizeStatutCompteByCin);
         }
     }
 

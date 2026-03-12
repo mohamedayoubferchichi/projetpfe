@@ -43,6 +43,24 @@ const chiffres = [
   { value: '96%', label: 'Satisfaction client' }
 ]
 
+const etapes = [
+  {
+    step: '01',
+    title: 'Déclarer l incident',
+    desc: 'Signalez rapidement le sinistre voyage avec les informations de votre séjour.'
+  },
+  {
+    step: '02',
+    title: 'Uploader les pièces',
+    desc: 'Ajoutez billets, factures et justificatifs médicaux si nécessaires.'
+  },
+  {
+    step: '03',
+    title: 'Décision du dossier',
+    desc: 'Recevez la décision et le montant proposé après analyse de votre dossier.'
+  }
+]
+
 export default function MonVoyagePage() {
   return (
     <main>
@@ -58,8 +76,8 @@ export default function MonVoyagePage() {
             <p className="news-tag">Protection voyage</p>
             <h4>Une assistance complète avant et pendant votre séjour</h4>
             <p>Protégez vos déplacements avec des garanties adaptées à vos besoins de mobilité.</p>
-            <Link to="/creer-compte" className="nav-btn primary-btn devis-btn">
-              Demander un devis
+            <Link to="/declaration-sinistre?type=VOYAGE" className="nav-btn primary-btn devis-btn">
+              Déclarer un sinistre
             </Link>
           </div>
         </div>
@@ -94,6 +112,20 @@ export default function MonVoyagePage() {
         </div>
       </section>
 
+      <section className="section container offer-flow-section">
+        <p className="section-kicker">Parcours sinistre</p>
+        <h2 className="section-title">Comment traiter votre dossier voyage</h2>
+        <div className="offer-flow-grid">
+          {etapes.map((item) => (
+            <article className="offer-flow-card" key={item.step}>
+              <span className="offer-flow-step">{item.step}</span>
+              <h4>{item.title}</h4>
+              <p>{item.desc}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <section className="section section-alt">
         <div className="container stats-layout">
           <div>
@@ -101,8 +133,8 @@ export default function MonVoyagePage() {
             <p className="text-muted">
               Accédez à vos documents et suivez vos demandes directement depuis votre espace client.
             </p>
-            <Link to="/profile" className="nav-btn primary-btn">
-              Voir mon profil
+            <Link to="/declaration-sinistre?type=VOYAGE" className="nav-btn primary-btn">
+              Commencer la déclaration
             </Link>
           </div>
           <div className="stats-grid-2">

@@ -43,6 +43,24 @@ const chiffres = [
   { value: '95%', label: 'Clients satisfaits' }
 ]
 
+const etapes = [
+  {
+    step: '01',
+    title: 'Déclarer en ligne',
+    desc: 'Remplissez le formulaire sinistre auto et ajoutez les photos de l accident.'
+  },
+  {
+    step: '02',
+    title: 'Analyse du dossier',
+    desc: 'Le dossier est analysé automatiquement puis orienté vers validation si besoin.'
+  },
+  {
+    step: '03',
+    title: 'Décision & indemnisation',
+    desc: 'Vous suivez la décision et le montant directement depuis votre espace client.'
+  }
+]
+
 export default function MaVoiturePage() {
   return (
     <main>
@@ -60,8 +78,8 @@ export default function MaVoiturePage() {
             <p>
               Choisissez une formule adaptée à votre profil et profitez d’un accompagnement humain à chaque étape.
             </p>
-            <Link to="/creer-compte" className="nav-btn primary-btn devis-btn">
-              Demander un devis
+            <Link to="/declaration-sinistre?type=AUTO" className="nav-btn primary-btn devis-btn">
+              Déclarer un sinistre
             </Link>
           </div>
         </div>
@@ -96,15 +114,29 @@ export default function MaVoiturePage() {
         </div>
       </section>
 
+      <section className="section container offer-flow-section">
+        <p className="section-kicker">Parcours sinistre</p>
+        <h2 className="section-title">Comment traiter votre dossier auto</h2>
+        <div className="offer-flow-grid">
+          {etapes.map((item) => (
+            <article className="offer-flow-card" key={item.step}>
+              <span className="offer-flow-step">{item.step}</span>
+              <h4>{item.title}</h4>
+              <p>{item.desc}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <section className="section section-alt">
         <div className="container stats-layout">
           <div>
             <h2 className="section-title left">Déclarer un sinistre automobile</h2>
             <p className="text-muted">
-              Déclarez votre sinistre en ligne et suivez votre dossier étape par étape avec nos équipes.
+              Déclarez votre sinistre en ligne puis suivez chaque étape du traitement en temps réel.
             </p>
-            <Link to="/creer-compte" className="nav-btn primary-btn">
-              Créer un compte
+            <Link to="/declaration-sinistre?type=AUTO" className="nav-btn primary-btn">
+              Commencer la déclaration
             </Link>
           </div>
           <div className="stats-grid-2">

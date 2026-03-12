@@ -111,6 +111,9 @@ export default function AdminPage() {
   const [userForm, setUserForm] = useState(emptyUserForm)
   const [editingUserId, setEditingUserId] = useState(null)
 
+  const [contratSearchTerm, setContratSearchTerm] = useState('')
+  const [userCinSearchTerm, setUserCinSearchTerm] = useState('')
+
   const [contactMessages, setContactMessages] = useState([])
   const [selectedContactMessageId, setSelectedContactMessageId] = useState(null)
   const [messageReplies, setMessageReplies] = useState([])
@@ -442,6 +445,18 @@ export default function AdminPage() {
     setIsThreadOpen(true)
   }
 
+  const filteredContrats = contrats.filter((contrat) =>
+    (contrat.numeroContrat || '')
+      .toLowerCase()
+      .includes(contratSearchTerm.trim().toLowerCase())
+  )
+
+  const filteredUtilisateurs = utilisateurs.filter((utilisateur) =>
+    (utilisateur.cin || '')
+      .toLowerCase()
+      .includes(userCinSearchTerm.trim().toLowerCase())
+  )
+
   return (
     <main className="admin-page">
       <section className="section container products-section admin-hero-section">
@@ -545,9 +560,20 @@ export default function AdminPage() {
             <div className="admin-panel-head">
               <h3>Liste des contrats</h3>
             </div>
+
+            <div className="admin-search-bar">
+              <input
+                type="text"
+                placeholder="Recherche par numero contrat..."
+                value={contratSearchTerm}
+                onChange={(event) => setContratSearchTerm(event.target.value)}
+              />
+            </div>
+
             <div className="profile-history-list admin-list">
               {contrats.length === 0 ? <p className="auth-switch">Aucun contrat trouvé.</p> : null}
-              {contrats.map((contrat) => (
+              {contrats.length > 0 && filteredContrats.length === 0 ? <p className="auth-switch">Aucun contrat pour cette recherche.</p> : null}
+              {filteredContrats.map((contrat) => (
                 <article key={contrat.id} className="profile-history-item admin-item">
                   <div>
                     <p className="history-label">Numéro contrat</p>
@@ -646,9 +672,20 @@ export default function AdminPage() {
             <div className="admin-panel-head">
               <h3>Liste des utilisateurs</h3>
             </div>
+
+            <div className="admin-search-bar">
+              <input
+                type="text"
+                placeholder="Recherche utilisateur par CIN..."
+                value={userCinSearchTerm}
+                onChange={(event) => setUserCinSearchTerm(event.target.value)}
+              />
+            </div>
+
             <div className="profile-history-list admin-list">
               {utilisateurs.length === 0 ? <p className="auth-switch">Aucun utilisateur trouvé.</p> : null}
-              {utilisateurs.map((utilisateur) => (
+              {utilisateurs.length > 0 && filteredUtilisateurs.length === 0 ? <p className="auth-switch">Aucun utilisateur pour ce CIN.</p> : null}
+              {filteredUtilisateurs.map((utilisateur) => (
                 <article key={utilisateur.id} className="profile-history-item admin-item">
                   <div>
                     <p className="history-label">Nom</p>

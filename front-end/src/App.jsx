@@ -15,6 +15,7 @@ import AssistancePage from './pages/AssistancePage'
 import AgencesPage from './pages/AgencesPage'
 import ContactPage from './pages/ContactPage'
 import BulletinPage from './pages/BulletinPage'
+import DeclarationSinistrePage from './pages/DeclarationSinistrePage'
 
 const quickLinks = [
   { label: 'Assistance', to: '/assistance' },
@@ -157,6 +158,16 @@ export default function App() {
         <Route path="/mon-habitation" element={<MonHabitationPage />} />
         <Route path="/mon-voyage" element={<MonVoyagePage />} />
         <Route path="/ma-prevoyance" element={<MaPrevoyancePage />} />
+        <Route
+          path="/declaration-sinistre"
+          element={
+            !isAuthenticated
+              ? <Navigate to="/se-connecter" replace />
+              : userRole === 'ADMIN'
+                ? <Navigate to="/admin" replace />
+                : <DeclarationSinistrePage />
+          }
+        />
         <Route path="/assistance" element={<AssistancePage />} />
         <Route path="/agences" element={<AgencesPage />} />
         <Route path="/contact" element={<ContactPage />} />

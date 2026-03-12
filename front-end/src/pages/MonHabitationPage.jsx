@@ -43,6 +43,24 @@ const chiffres = [
   { value: '92%', label: 'Clients satisfaits' }
 ]
 
+const etapes = [
+  {
+    step: '01',
+    title: 'Déclarer les dégâts',
+    desc: 'Décrivez le sinistre habitation et précisez le lieu, la date et le contrat.'
+  },
+  {
+    step: '02',
+    title: 'Envoyer justificatifs',
+    desc: 'Ajoutez les photos et documents utiles pour accélérer l analyse du dossier.'
+  },
+  {
+    step: '03',
+    title: 'Suivre la prise en charge',
+    desc: 'Consultez le statut, la décision et l indemnisation depuis votre espace client.'
+  }
+]
+
 export default function MonHabitationPage() {
   return (
     <main>
@@ -58,8 +76,8 @@ export default function MonHabitationPage() {
             <p className="news-tag">Protection logement</p>
             <h4>Une couverture complète pour votre maison</h4>
             <p>Choisissez la formule adaptée à votre habitation et gagnez en sérénité au quotidien.</p>
-            <Link to="/creer-compte" className="nav-btn primary-btn devis-btn">
-              Demander un devis
+            <Link to="/declaration-sinistre?type=HABITATION" className="nav-btn primary-btn devis-btn">
+              Déclarer un sinistre
             </Link>
           </div>
         </div>
@@ -94,6 +112,20 @@ export default function MonHabitationPage() {
         </div>
       </section>
 
+      <section className="section container offer-flow-section">
+        <p className="section-kicker">Parcours sinistre</p>
+        <h2 className="section-title">Comment traiter votre dossier habitation</h2>
+        <div className="offer-flow-grid">
+          {etapes.map((item) => (
+            <article className="offer-flow-card" key={item.step}>
+              <span className="offer-flow-step">{item.step}</span>
+              <h4>{item.title}</h4>
+              <p>{item.desc}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <section className="section section-alt">
         <div className="container stats-layout">
           <div>
@@ -101,8 +133,8 @@ export default function MonHabitationPage() {
             <p className="text-muted">
               Envoyez vos justificatifs et suivez chaque étape de votre dossier depuis votre espace client.
             </p>
-            <Link to="/profile" className="nav-btn primary-btn">
-              Voir mon profil
+            <Link to="/declaration-sinistre?type=HABITATION" className="nav-btn primary-btn">
+              Commencer la déclaration
             </Link>
           </div>
           <div className="stats-grid-2">

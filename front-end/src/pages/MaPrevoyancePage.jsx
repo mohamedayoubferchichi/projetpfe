@@ -43,6 +43,24 @@ const chiffres = [
   { value: '94%', label: 'Clients fidèles' }
 ]
 
+const etapes = [
+  {
+    step: '01',
+    title: 'Déclarer la situation',
+    desc: 'Renseignez votre contrat et la situation concernée dans le formulaire sinistre.'
+  },
+  {
+    step: '02',
+    title: 'Ajouter les justificatifs',
+    desc: 'Chargez les documents nécessaires pour une analyse rapide de votre dossier.'
+  },
+  {
+    step: '03',
+    title: 'Recevoir la décision',
+    desc: 'Suivez la décision et les prochaines étapes de prise en charge.'
+  }
+]
+
 export default function MaPrevoyancePage() {
   return (
     <main>
@@ -58,8 +76,8 @@ export default function MaPrevoyancePage() {
             <p className="news-tag">Protection long terme</p>
             <h4>Des solutions de prévoyance adaptées à chaque étape de vie</h4>
             <p>Bénéficiez d’une couverture flexible pour protéger vos proches et vos projets.</p>
-            <Link to="/creer-compte" className="nav-btn primary-btn devis-btn">
-              Demander un devis
+            <Link to="/declaration-sinistre?type=PREVOYANCE" className="nav-btn primary-btn devis-btn">
+              Déclarer un sinistre
             </Link>
           </div>
         </div>
@@ -94,6 +112,20 @@ export default function MaPrevoyancePage() {
         </div>
       </section>
 
+      <section className="section container offer-flow-section">
+        <p className="section-kicker">Parcours sinistre</p>
+        <h2 className="section-title">Comment traiter votre dossier prévoyance</h2>
+        <div className="offer-flow-grid">
+          {etapes.map((item) => (
+            <article className="offer-flow-card" key={item.step}>
+              <span className="offer-flow-step">{item.step}</span>
+              <h4>{item.title}</h4>
+              <p>{item.desc}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <section className="section section-alt">
         <div className="container stats-layout">
           <div>
@@ -101,8 +133,8 @@ export default function MaPrevoyancePage() {
             <p className="text-muted">
               Suivez vos contrats et mettez à jour vos garanties selon vos objectifs de vie.
             </p>
-            <Link to="/profile" className="nav-btn primary-btn">
-              Voir mon profil
+            <Link to="/declaration-sinistre?type=PREVOYANCE" className="nav-btn primary-btn">
+              Commencer la déclaration
             </Link>
           </div>
           <div className="stats-grid-2">

@@ -16,6 +16,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
+
 @Service
 public class AuthService {
 
@@ -71,9 +73,8 @@ public class AuthService {
         utilisateur.setNumeroContrat(StringUtils.hasText(numeroContrat) ? numeroContrat : null);
         utilisateur.setRole("UTILISATEUR");
 
-        boolean hasContratInfo = StringUtils.hasText(cin) && StringUtils.hasText(numeroContrat);
-        boolean isVerified = hasContratInfo
-                && contratReferenceRepository.existsByCinAndNumeroContrat(cin, numeroContrat);
+        boolean isVerified = StringUtils.hasText(cin)
+            && contratReferenceRepository.existsByCinAndDateFinContratGreaterThanEqual(cin, LocalDate.now());
         utilisateur.setStatutCompte(isVerified ? StatutCompte.VERIFIE : StatutCompte.NON_VERIFIE);
 
         Utilisateur savedUtilisateur = utilisateurRepository.save(utilisateur);
@@ -86,6 +87,17 @@ public class AuthService {
 
         if (!passwordEncoder.matches(request.getPassword(), utilisateur.getPassword())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
+        }
+
+        boolean isVerified = StringUtils.hasText(utilisateur.getCin())
+                && contratReferenceRepository.existsByCinAndDateFinContratGreaterThanEqual(
+                utilisateur.getCin().trim(),
+                LocalDate.now()
+        );
+        StatutCompte computedStatut = isVerified ? StatutCompte.VERIFIE : StatutCompte.NON_VERIFIE;
+        if (utilisateur.getStatutCompte() != computedStatut) {
+            utilisateur.setStatutCompte(computedStatut);
+            utilisateurRepository.save(utilisateur);
         }
 
         return jwtService.generateToken(utilisateur.getEmail(), utilisateur.getRole());

@@ -12,4 +12,5 @@ public interface ContratReferenceRepository extends MongoRepository<ContratRefer
 	List<ContratReference> findByCinOrderByDateFinContratDesc(String cin);
 	Optional<ContratReference> findByNumeroContrat(String numeroContrat);
 	boolean existsByCinAndNumeroContrat(String cin, String numeroContrat);
+	boolean existsByCinAndDateFinContratGreaterThanEqual(String cin, LocalDate date);
 }
