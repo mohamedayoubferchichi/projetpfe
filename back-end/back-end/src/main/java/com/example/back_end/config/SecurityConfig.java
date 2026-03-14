@@ -28,6 +28,10 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/publications/**").permitAll()
+                        .requestMatchers("/api/publications/**").hasRole("ADMIN")
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/agences/**").permitAll()
+                        .requestMatchers("/api/agences/**").hasRole("ADMIN")
                         .requestMatchers("/api/contrats/**").hasRole("ADMIN")
                     .requestMatchers("/api/contact-messages/admin/**").hasRole("ADMIN")
                     .requestMatchers("/api/contact-messages/*/replies/**").hasAnyRole("UTILISATEUR", "ADMIN")

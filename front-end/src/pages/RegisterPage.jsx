@@ -7,6 +7,7 @@ export default function RegisterPage() {
     nom: '',
     email: '',
     password: '',
+    telephone: '',
     cin: '',
     numeroContrat: ''
   })
@@ -39,6 +40,7 @@ export default function RegisterPage() {
         },
         body: JSON.stringify({
           ...formData,
+          telephone: formData.telephone.trim(),
           cin: formData.cin.trim(),
           numeroContrat: formData.numeroContrat.trim()
         })
@@ -98,6 +100,16 @@ export default function RegisterPage() {
               onChange={handleChange}
               placeholder="********"
               required
+            />
+          </label>
+          <label>
+            Téléphone
+            <input
+              type="text"
+              name="telephone"
+              value={formData.telephone}
+              onChange={handleChange}
+              placeholder="Votre numéro de téléphone"
             />
           </label>
           <label>

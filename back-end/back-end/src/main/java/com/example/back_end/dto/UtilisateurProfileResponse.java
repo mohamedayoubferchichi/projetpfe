@@ -8,7 +8,9 @@ public class UtilisateurProfileResponse {
     private String id;
     private String nom;
     private String email;
+    private String telephone;
     private String cin;
+    private String numeroContrat;
     private String role;
     private StatutCompte statutCompte;
     private int nombreContrats;
@@ -38,12 +40,28 @@ public class UtilisateurProfileResponse {
         this.email = email;
     }
 
+    public String getTelephone() {
+        return telephone;
+    }
+
+    public void setTelephone(String telephone) {
+        this.telephone = telephone;
+    }
+
     public String getCin() {
         return cin;
     }
 
     public void setCin(String cin) {
         this.cin = cin;
+    }
+
+    public String getNumeroContrat() {
+        return numeroContrat;
+    }
+
+    public void setNumeroContrat(String numeroContrat) {
+        this.numeroContrat = numeroContrat;
     }
 
     public String getRole() {

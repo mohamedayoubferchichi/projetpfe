@@ -33,6 +33,11 @@ public class UtilisateurController {
         return utilisateurService.getProfileByEmail(authentication.getName());
     }
 
+    @PutMapping("/me")
+    public UtilisateurProfileResponse updateMe(Authentication authentication, @RequestBody UpdateUtilisateurRequest request) {
+        return utilisateurService.updateProfileByEmail(authentication.getName(), request);
+    }
+
     @GetMapping
     public List<AdminUtilisateurResponse> findAll() {
         return utilisateurService.findAllForAdmin();

@@ -1,33 +1,18 @@
 import { Link } from 'react-router-dom'
-
-const agencies = [
-    {
-        city: 'Tunis - La Goulette',
-        address: '9 rue de Palestine, cité des affaires',
-        phone: '70 255 000',
-        hours: 'Lun-Ven: 08:30 - 17:30'
-    },
-    {
-        city: 'Sousse - Kantaoui',
-        address: 'Avenue du 14 Janvier, Immeuble El Hana',
-        phone: '73 300 100',
-        hours: 'Lun-Ven: 08:30 - 17:30'
-    },
-    {
-        city: 'Sfax - Ville',
-        address: 'Boulevard 14 Janvier, Résidence du Lac',
-        phone: '74 400 200',
-        hours: 'Lun-Ven: 08:30 - 17:30'
-    },
-    {
-        city: 'Bizerte - Corniche',
-        address: 'Avenue Habib Bourguiba, Face au port',
-        phone: '72 500 300',
-        hours: 'Lun-Ven: 08:30 - 16:30'
-    }
-]
+import { useEffect, useState } from 'react'
 
 export default function AgencesPage() {
+    const [agences, setAgences] = useState([])
+    const [isLoading, setIsLoading] = useState(true)
+
+    useEffect(() => {
+        fetch('/api/agences')
+            .then((res) => res.json())
+            .then((data) => setAgences(Array.isArray(data) ? data : []))
+            .catch(() => setAgences([]))
+            .finally(() => setIsLoading(false))
+    }, [])
+
     return (
         <main>
             <section className="section container products-section">
@@ -40,7 +25,7 @@ export default function AgencesPage() {
                     />
                     <div>
                         <p className="news-tag">Proximité & Conseil</p>
-                        <h4>Plus de 160 agences à travers la Tunisie</h4>
+                        <h4>Plus de {agences.length > 0 ? agences.length : 160} agences à travers la Tunisie</h4>
                         <p>
                             Nos conseillers vous accueillent partout en Tunisie pour vous proposer des solutions personnalisées et un accompagnement de proximité.
                         </p>
@@ -53,19 +38,25 @@ export default function AgencesPage() {
 
             <section className="section container">
                 <p className="section-kicker">Réseau d'agences</p>
-                <div className="product-grid">
-                    {agencies.map((item) => (
-                        <article className="product-card" key={item.city} style={{ textAlign: 'left' }}>
-                            <h4 style={{ fontSize: '1.4rem' }}>{item.city}</h4>
-                            <p>📍 {item.address}</p>
-                            <p>📞 {item.phone}</p>
-                            <p>🕒 {item.hours}</p>
-                            <Link to="/contact" style={{ color: '#00cccc', fontWeight: 'bold', display: 'block', marginTop: '1rem' }}>
-                                Prendre rendez-vous →
-                            </Link>
-                        </article>
-                    ))}
-                </div>
+                {isLoading ? (
+                    <p className="text-muted" style={{ textAlign: 'center' }}>Chargement...</p>
+                ) : agences.length === 0 ? (
+                    <p className="text-muted" style={{ textAlign: 'center' }}>Aucune agence disponible.</p>
+                ) : (
+                    <div className="product-grid">
+                        {agences.map((item) => (
+                            <article className="product-card" key={item.id} style={{ textAlign: 'left' }}>
+                                <h4 style={{ fontSize: '1.4rem' }}>{item.ville}</h4>
+                                {item.adresse && <p>📍 {item.adresse}</p>}
+                                {item.telephone && <p>📞 {item.telephone}</p>}
+                                {item.horaires && <p>🕒 {item.horaires}</p>}
+                                <Link to="/contact" style={{ color: '#00cccc', fontWeight: 'bold', display: 'block', marginTop: '1rem' }}>
+                                    Prendre rendez-vous →
+                                </Link>
+                            </article>
+                        ))}
+                    </div>
+                )}
             </section>
 
             <section className="section section-alt">

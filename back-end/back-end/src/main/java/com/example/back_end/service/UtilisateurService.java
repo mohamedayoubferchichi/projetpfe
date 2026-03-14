@@ -51,21 +51,50 @@ public class UtilisateurService {
                 .collect(Collectors.toList());
     }
 
+    public UtilisateurProfileResponse updateProfileByEmail(String email, UpdateUtilisateurRequest request) {
+        Utilisateur utilisateur = utilisateurRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Utilisateur not found"));
+
+        validateEmailUniqueness(request.getEmail(), utilisateur.getId());
+
+        utilisateur.setNom(normalizeValue(request.getNom()));
+        utilisateur.setEmail(normalizeValue(request.getEmail()));
+        utilisateur.setTelephone(normalizeValue(request.getTelephone()));
+        utilisateur.setCin(normalizeValue(request.getCin()));
+        utilisateur.setNumeroContrat(normalizeValue(request.getNumeroContrat()));
+
+        if (request.getPassword() != null && !request.getPassword().isBlank()) {
+            utilisateur.setPassword(passwordEncoder.encode(request.getPassword().trim()));
+        }
+
+        utilisateur.setStatutCompte(computeStatutCompteForCin(utilisateur.getCin()));
+
+        Utilisateur savedUtilisateur = utilisateurRepository.save(utilisateur);
+        return toProfileResponse(savedUtilisateur);
+    }
+
     public Utilisateur update(String id, UpdateUtilisateurRequest request) {
         Utilisateur utilisateur = utilisateurRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Utilisateur not found"));
 
-        utilisateur.setNom(request.getNom());
-        utilisateur.setEmail(request.getEmail());
-        utilisateur.setCin(request.getCin());
-        utilisateur.setNumeroContrat(request.getNumeroContrat());
+        validateEmailUniqueness(request.getEmail(), utilisateur.getId());
+
+        utilisateur.setNom(normalizeValue(request.getNom()));
+        utilisateur.setEmail(normalizeValue(request.getEmail()));
+        utilisateur.setTelephone(normalizeValue(request.getTelephone()));
+        utilisateur.setCin(normalizeValue(request.getCin()));
+        utilisateur.setNumeroContrat(normalizeValue(request.getNumeroContrat()));
         utilisateur.setRole("UTILISATEUR");
 
         if (request.getPassword() != null && !request.getPassword().isBlank()) {
-            utilisateur.setPassword(passwordEncoder.encode(request.getPassword()));
+            utilisateur.setPassword(passwordEncoder.encode(request.getPassword().trim()));
         }
 
-        utilisateur.setStatutCompte(computeStatutCompteForCin(utilisateur.getCin()));
+        if (request.getStatutCompte() != null) {
+            utilisateur.setStatutCompte(request.getStatutCompte());
+        } else {
+            utilisateur.setStatutCompte(computeStatutCompteForCin(utilisateur.getCin()));
+        }
 
         return utilisateurRepository.save(utilisateur);
     }
@@ -136,7 +165,9 @@ public class UtilisateurService {
         response.setId(utilisateur.getId());
         response.setNom(utilisateur.getNom());
         response.setEmail(utilisateur.getEmail());
+        response.setTelephone(utilisateur.getTelephone());
         response.setCin(utilisateur.getCin());
+        response.setNumeroContrat(utilisateur.getNumeroContrat());
         response.setRole(utilisateur.getRole());
         response.setStatutCompte(utilisateur.getStatutCompte());
         response.setNombreContrats(contrats.size());
@@ -158,6 +189,7 @@ public class UtilisateurService {
         response.setId(utilisateur.getId());
         response.setNom(utilisateur.getNom());
         response.setEmail(utilisateur.getEmail());
+        response.setTelephone(utilisateur.getTelephone());
         response.setCin(utilisateur.getCin());
         response.setNumeroContrat(utilisateur.getNumeroContrat());
         response.setRole(utilisateur.getRole());
@@ -185,5 +217,22 @@ public class UtilisateurService {
                 .existsByCinAndDateFinContratGreaterThanEqual(cin.trim(), LocalDate.now());
 
         return hasAtLeastOneActiveContrat ? StatutCompte.VERIFIE : StatutCompte.NON_VERIFIE;
+    }
+
+    private void validateEmailUniqueness(String email, String currentUserId) {
+        String normalizedEmail = normalizeValue(email);
+        if (!StringUtils.hasText(normalizedEmail)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email utilisateur obligatoire.");
+        }
+
+        utilisateurRepository.findByEmail(normalizedEmail)
+                .filter(existingUser -> !Objects.equals(existingUser.getId(), currentUserId))
+                .ifPresent(existingUser -> {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already exists");
+                });
+    }
+
+    private String normalizeValue(String value) {
+        return StringUtils.hasText(value) ? value.trim() : null;
     }
 }

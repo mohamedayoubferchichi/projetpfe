@@ -4,6 +4,7 @@ public class UtilisateurRegisterRequest {
     private String nom;
     private String email;
     private String password;
+    private String telephone;
     private String cin;
     private String numeroContrat;
 
@@ -29,6 +30,14 @@ public class UtilisateurRegisterRequest {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getTelephone() {
+        return telephone;
+    }
+
+    public void setTelephone(String telephone) {
+        this.telephone = telephone;
     }
 
     public String getCin() {

@@ -1,6 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 
+const createProfileForm = (profile) => ({
+  nom: profile?.nom || '',
+  email: profile?.email || '',
+  password: '',
+  telephone: profile?.telephone || '',
+  cin: profile?.cin || '',
+  numeroContrat: profile?.numeroContrat || ''
+})
+
 const historiqueSinistres = [
   {
     reference: 'SIN-2026-0142',
@@ -111,22 +120,13 @@ const getContractStatusClass = (status) => (status === 'ACTIF' ? 'history-status
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState(null)
+  const [profileForm, setProfileForm] = useState(createProfileForm())
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
-
-  const [contactMessages, setContactMessages] = useState([])
-  const [selectedContactMessageId, setSelectedContactMessageId] = useState(null)
-  const [messageReplies, setMessageReplies] = useState([])
-  const [replyText, setReplyText] = useState('')
-
-  const [newMessageForm, setNewMessageForm] = useState({ sujet: '', message: '' })
-  const [isSendingMessage, setIsSendingMessage] = useState(false)
-  const [isReplySubmitting, setIsReplySubmitting] = useState(false)
-  const [messageError, setMessageError] = useState('')
-  const [messageSuccess, setMessageSuccess] = useState('')
-
-  const [isMessengerOpen, setIsMessengerOpen] = useState(false)
-  const [isThreadOpen, setIsThreadOpen] = useState(false)
+  const [accountError, setAccountError] = useState('')
+  const [accountSuccess, setAccountSuccess] = useState('')
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('token')
@@ -136,26 +136,31 @@ export default function ProfilePage() {
     }
   }
 
-  const loadMyMessages = async () => {
-    const response = await fetch('/api/contact-messages/mine', {
+  const applyProfileData = (data) => {
+    setProfile(data)
+    setProfileForm(createProfileForm(data))
+
+    if (data?.nom) {
+      localStorage.setItem('userDisplayName', data.nom)
+    }
+
+    if (data?.email) {
+      localStorage.setItem('userEmail', data.email)
+    }
+  }
+
+  const loadProfile = async () => {
+    const response = await fetch('/api/utilisateurs/me', {
       headers: getAuthHeaders()
     })
 
     if (!response.ok) {
-      throw new Error('Impossible de charger vos messages.')
+      throw new Error('Impossible de charger les informations du profil.')
     }
 
     const data = await response.json()
-    const normalized = Array.isArray(data) ? data : []
-
-    setContactMessages(normalized)
-    setSelectedContactMessageId((prev) => {
-      if (prev && normalized.some((item) => item.id === prev)) {
-        return prev
-      }
-
-      return normalized[0]?.id || null
-    })
+    applyProfileData(data)
+    return data
   }
 
   useEffect(() => {
@@ -167,458 +172,332 @@ export default function ProfilePage() {
       return
     }
 
-    fetch('/api/utilisateurs/me', {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    })
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error('Impossible de charger les informations du profil.')
-        }
-        return response.json()
-      })
-      .then((data) => {
-        setProfile(data)
-        if (data?.nom) {
-          localStorage.setItem('userDisplayName', data.nom)
-        }
-        if (data?.email) {
-          localStorage.setItem('userEmail', data.email)
-        }
-
-        return loadMyMessages()
-      })
-      .catch((fetchError) => {
+    const initializePage = async () => {
+      try {
+        await loadProfile()
+      } catch (fetchError) {
         setError(fetchError.message)
-      })
-      .finally(() => {
+      } finally {
         setIsLoading(false)
-      })
+      }
+    }
+
+    initializePage()
   }, [])
 
-  useEffect(() => {
-    const token = localStorage.getItem('token')
+  const handleProfileChange = (event) => {
+    const { name, value } = event.target
+    setProfileForm((prev) => ({ ...prev, [name]: value }))
+  }
 
-    if (!token || !selectedContactMessageId) {
-      setMessageReplies([])
-      return
-    }
+  const handleOpenEditModal = () => {
+    setProfileForm(createProfileForm(profile))
+    setAccountError('')
+    setAccountSuccess('')
+    setIsEditModalOpen(true)
+  }
 
-    fetch(`/api/contact-messages/${selectedContactMessageId}/replies`, {
-      headers: getAuthHeaders()
-    })
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error('Impossible de charger la conversation.')
-        }
-        return response.json()
-      })
-      .then((data) => {
-        setMessageReplies(Array.isArray(data) ? data : [])
-      })
-      .catch(() => {
-        setMessageReplies([])
-      })
-  }, [selectedContactMessageId])
-
-  const handleCreateMessage = async (event) => {
+  const handleSubmitProfile = async (event) => {
     event.preventDefault()
-    setMessageError('')
-    setMessageSuccess('')
+    setAccountError('')
+    setAccountSuccess('')
 
-    if (!newMessageForm.sujet.trim() || !newMessageForm.message.trim()) {
-      setMessageError('Sujet et message sont obligatoires.')
+    if (!profileForm.nom.trim() || !profileForm.email.trim()) {
+      setAccountError('Nom et email sont obligatoires.')
       return
     }
 
-    if (!profile?.nom || !profile?.email) {
-      setMessageError('Informations utilisateur introuvables. Rechargez votre profil.')
-      return
-    }
-
-    setIsSendingMessage(true)
+    setIsSavingProfile(true)
 
     try {
-      const response = await fetch('/api/contact-messages', {
-        method: 'POST',
+      const previousEmail = String(profile?.email || '').trim().toLowerCase()
+      const response = await fetch('/api/utilisateurs/me', {
+        method: 'PUT',
         headers: getAuthHeaders(),
-        body: JSON.stringify({
-          nom: profile.nom,
-          email: profile.email,
-          sujet: newMessageForm.sujet,
-          message: newMessageForm.message
-        })
+        body: JSON.stringify(profileForm)
       })
 
       const data = await response.json().catch(() => null)
 
       if (!response.ok) {
-        throw new Error(data?.message || 'Impossible d\'envoyer le message.')
+        throw new Error(data?.message || 'Impossible de mettre a jour le profil.')
       }
 
-      setMessageSuccess('Message envoye avec succes.')
-      setNewMessageForm({ sujet: '', message: '' })
+      applyProfileData(data)
+      setIsEditModalOpen(false)
 
-      await loadMyMessages()
-      if (data?.id) {
-        setSelectedContactMessageId(data.id)
-        setIsThreadOpen(true)
+      const updatedEmail = String(data?.email || '').trim().toLowerCase()
+      if (previousEmail && updatedEmail && previousEmail !== updatedEmail) {
+        setAccountSuccess('Profil mis a jour. Reconnectez-vous avec votre nouvelle adresse email.')
+        localStorage.removeItem('token')
+        localStorage.removeItem('userEmail')
+        localStorage.removeItem('userDisplayName')
+        localStorage.removeItem('userRole')
+        window.setTimeout(() => {
+          window.location.href = '/se-connecter'
+        }, 1400)
+        return
       }
+
+      setAccountSuccess('Profil mis a jour avec succes.')
     } catch (submitError) {
-      setMessageError(submitError.message || 'Erreur lors de l\'envoi du message.')
+      setAccountError(submitError.message || 'Erreur lors de la mise a jour du profil.')
     } finally {
-      setIsSendingMessage(false)
+      setIsSavingProfile(false)
     }
   }
 
-  const handleSubmitReply = async (event) => {
-    event.preventDefault()
-    setMessageError('')
-    setMessageSuccess('')
-
-    if (!selectedContactMessageId) {
-      setMessageError('Selectionnez une conversation.')
-      return
-    }
-
-    if (!replyText.trim()) {
-      setMessageError('Ecrivez un message avant l\'envoi.')
-      return
-    }
-
-    setIsReplySubmitting(true)
-
-    try {
-      const response = await fetch(`/api/contact-messages/${selectedContactMessageId}/replies`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ message: replyText })
-      })
-
-      const data = await response.json().catch(() => null)
-
-      if (!response.ok) {
-        throw new Error(data?.message || 'Impossible d\'envoyer la reponse.')
-      }
-
-      setReplyText('')
-      setMessageSuccess('Reponse envoyee.')
-
-      const repliesResponse = await fetch(`/api/contact-messages/${selectedContactMessageId}/replies`, {
-        headers: getAuthHeaders()
-      })
-
-      if (repliesResponse.ok) {
-        const repliesData = await repliesResponse.json()
-        setMessageReplies(Array.isArray(repliesData) ? repliesData : [])
-      }
-    } catch (submitError) {
-      setMessageError(submitError.message || 'Erreur lors de la reponse.')
-    } finally {
-      setIsReplySubmitting(false)
-    }
-  }
-
-  const openMessenger = () => {
-    setIsMessengerOpen(true)
-    setIsThreadOpen(false)
-  }
-
-  const closeMessenger = () => {
-    setIsMessengerOpen(false)
-    setIsThreadOpen(false)
-    setMessageError('')
-    setMessageSuccess('')
-  }
-
-  const openThread = (contactMessageId) => {
-    setSelectedContactMessageId(contactMessageId)
-    setIsThreadOpen(true)
-    setMessageError('')
-    setMessageSuccess('')
-  }
-
-  const infosProfil = useMemo(
-    () => [
-      { label: 'Nom', value: profile?.nom || '-' },
-      { label: 'Email', value: profile?.email || '-' },
-      { label: 'CIN', value: profile?.cin || '-' }
-    ],
-    [profile]
-  )
   const contrats = profile?.contrats || []
   const nombreContrats = profile?.nombreContrats ?? contrats.length
-  const selectedContactMessage = contactMessages.find((item) => item.id === selectedContactMessageId) || null
-  const unreadBadge = contactMessages.length > 9 ? '9+' : String(contactMessages.length)
-  const launcherAvatars = contactMessages.slice(0, 3)
+  const isVerified = String(profile?.statutCompte || '').toUpperCase() === 'VERIFIE'
+  const roleRaw = String(profile?.role || 'UTILISATEUR').replace('ROLE_', '').toUpperCase()
+  const roleLabel = roleRaw === 'ADMIN' ? 'Administrateur' : 'Utilisateur'
+  const telephoneLabel = String(profile?.telephone || '').trim() || 'Non renseigne'
+  const cinLabel = String(profile?.cin || '').trim() || 'Non renseigne'
+  const numeroContratLabel = String(profile?.numeroContrat || contrats[0]?.numeroContrat || '').trim() || 'Non renseigne'
+
+  const profileUsername = useMemo(() => {
+    const source = String(profile?.nom || profile?.email || 'utilisateur').trim()
+    return source.toLowerCase().replace(/\s+/g, '_')
+  }, [profile?.nom, profile?.email])
+
+  const memberSinceLabel = useMemo(() => {
+    const source = profile?.createdAt || profile?.dateCreation || profile?.createdDate
+    const date = source ? new Date(source) : new Date()
+    if (Number.isNaN(date.getTime())) {
+      return 'Non renseigne'
+    }
+    return new Intl.DateTimeFormat('fr-FR', { month: 'short', year: 'numeric' }).format(date)
+  }, [profile?.createdAt, profile?.dateCreation, profile?.createdDate])
 
   return (
     <main className="profile-page">
-      <section className="section container">
-        <div className="profile-header-card">
-          <div>
-            <p className="section-kicker profile-kicker">Espace client</p>
-            <h1 className="section-title left profile-title">{profile?.nom || 'Mon profil'}</h1>
-            <p className="text-muted profile-intro">
-              Gérez vos informations et consultez l’historique de vos sinistres en un seul endroit.
-            </p>
-          </div>
-          <span
-            className={`profile-status-badge ${
-              profile?.statutCompte === 'VERIFIE' ? 'profile-status-verified' : 'profile-status-pending'
-            }`}
-          >
-            {profile?.statutCompte === 'VERIFIE' ? 'Compte vérifié' : 'Compte non vérifié'}
-          </span>
-        </div>
-      </section>
+      <section className="section container profile-modern-shell">
+        {isLoading ? <p className="auth-switch">Chargement des informations...</p> : null}
+        {error ? <p className="auth-switch">{error}</p> : null}
 
-      <section className="section container profile-grid-layout">
-        <article className="profile-info-card">
-          <h2>Informations personnelles</h2>
-          {isLoading ? <p className="auth-switch">Chargement des informations...</p> : null}
-          {error ? <p className="auth-switch">{error}</p> : null}
-          <div className="auth-form">
-            {!isLoading && !error && infosProfil.map((item) => (
-              <label key={item.label}>
-                {item.label}
-                <input type="text" value={item.value} readOnly />
-              </label>
-            ))}
-          </div>
-        </article>
-
-        <aside className="profile-summary-card">
-          <div className="profile-contracts-head">
-            <h3>Mes contrats</h3>
-            <span className="profile-contracts-count">{nombreContrats}</span>
-          </div>
-          {isLoading ? <p className="auth-switch">Chargement des contrats...</p> : null}
-          {error ? null : (
-            <div className="profile-contract-list">
-              {!isLoading && contrats.length === 0 ? (
-                <p className="auth-switch">Aucun contrat trouvé.</p>
-              ) : null}
-              {!isLoading && contrats.map((contrat, index) => (
-                <article
-                  key={`${contrat.numeroContrat || 'contrat'}-${index}`}
-                  className="profile-contract-item"
-                >
-                  <p className="history-label">Numéro</p>
-                  <p className="history-value">{contrat.numeroContrat || '-'}</p>
-                  <p className="history-label">Date fin</p>
-                  <p className="history-value">{formatDate(contrat.dateFinContrat)}</p>
-                  <p className="history-label">Statut</p>
-                  <span className={`history-status ${getContractStatusClass(contrat.statut)}`}>
-                    {contrat.statut || 'INCONNU'}
-                  </span>
-                  <p className="history-label">Type</p>
-                  <p className="history-value">{contrat.typeContrat || '-'}</p>
-                </article>
-              ))}
-            </div>
-          )}
-        </aside>
-      </section>
-
-      <section className="section container profile-history-section">
-        <div className="profile-history-head">
-          <h2>Historique des sinistres</h2>
-          <Link to="/ma-voiture" className="nav-btn secondary-btn">
-            Déclarer un sinistre
-          </Link>
-        </div>
-        <div className="profile-history-list">
-          {historiqueSinistres.map((sinistre) => (
-            <article key={sinistre.reference} className="profile-history-item">
-              <div>
-                <p className="history-label">Référence</p>
-                <p className="history-value">{sinistre.reference}</p>
-              </div>
-              <div>
-                <p className="history-label">Date</p>
-                <p className="history-value">{sinistre.date}</p>
-              </div>
-              <div>
-                <p className="history-label">Type</p>
-                <p className="history-value">{sinistre.type}</p>
-              </div>
-              <div>
-                <p className="history-label">Statut</p>
-                <span
-                  className={`history-status ${
-                    sinistre.statut === 'Clôturé' ? 'history-status-closed' : 'history-status-open'
-                  }`}
-                >
-                  {sinistre.statut}
-                </span>
-              </div>
-            </article>
-          ))}
-        </div>
-
-        <p className="auth-switch">
-          Retour à <Link to="/">l’accueil</Link>
-        </p>
-      </section>
-
-      <div className="admin-messenger-floating">
-        {!isMessengerOpen ? (
-          <button type="button" className="admin-message-launcher" onClick={openMessenger} aria-label="Ouvrir la messagerie">
-            <span className="admin-launcher-left">
-              <span className="admin-launcher-icon-wrap">
-                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                  <path d="M4 6.5C4 5.67 4.67 5 5.5 5h13c.83 0 1.5.67 1.5 1.5v8c0 .83-.67 1.5-1.5 1.5H12l-4.8 3.4c-.9.63-2.14-.01-2.14-1.1V16h-.56C3.67 16 3 15.33 3 14.5v-8z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                {contactMessages.length > 0 ? <span className="admin-launcher-badge">{unreadBadge}</span> : null}
-              </span>
-              <span className="admin-launcher-title">Messages</span>
-            </span>
-
-            <span className="admin-launcher-avatars">
-              {launcherAvatars.map((item) => (
-                <span
-                  key={item.id}
-                  className="admin-launcher-avatar"
-                  style={{ backgroundColor: getAvatarColor(item.email || item.nom || item.id) }}
-                >
-                  {getAvatarLabel(item.nom, item.email)}
-                </span>
-              ))}
-              <span className="admin-launcher-more">...</span>
-            </span>
-          </button>
-        ) : (
-          <div className="admin-messenger-shell">
-            {!isThreadOpen ? (
-              <>
-                <header className="admin-messenger-header">
-                  <div className="admin-messenger-title-wrap">
-                    <h3>Messages</h3>
-                    {contactMessages.length > 0 ? <span className="admin-messenger-badge">{unreadBadge}</span> : null}
+        {!isLoading && !error ? (
+          <>
+            <article className="profile-modern-hero">
+              <div className="profile-modern-hero-bar" />
+              <div className="profile-modern-hero-body">
+                <div className="profile-modern-avatar-wrap">
+                  <div
+                    className="profile-modern-avatar"
+                    style={{ backgroundColor: getAvatarColor(profile?.email || profile?.nom || 'profil') }}
+                  >
+                    <span>{getAvatarLabel(profile?.nom, profile?.email)}</span>
+                    <span className="profile-modern-avatar-online" />
                   </div>
-                  <button type="button" className="admin-close-btn" onClick={closeMessenger} aria-label="Fermer">X</button>
-                </header>
-
-                <div className="user-new-message-card">
-                  <p className="user-new-message-title">Nouveau message vers Admin</p>
-                  <form className="user-new-message-form" onSubmit={handleCreateMessage}>
-                    <input
-                      type="text"
-                      placeholder="Sujet"
-                      value={newMessageForm.sujet}
-                      onChange={(event) => setNewMessageForm((prev) => ({ ...prev, sujet: event.target.value }))}
-                      required
-                    />
-                    <textarea
-                      className="user-mini-textarea"
-                      placeholder="Votre message..."
-                      value={newMessageForm.message}
-                      onChange={(event) => setNewMessageForm((prev) => ({ ...prev, message: event.target.value }))}
-                      required
-                    />
-                    <button type="submit" className="admin-send-btn" disabled={isSendingMessage}>
-                      {isSendingMessage ? '...' : 'Envoyer'}
-                    </button>
-                  </form>
                 </div>
 
-                <aside className="admin-message-list">
-                  {contactMessages.length === 0 ? <p className="auth-switch">Aucun message envoye.</p> : null}
-                  {contactMessages.map((item) => (
-                    <button
-                      type="button"
-                      key={item.id}
-                      className="admin-message-preview"
-                      onClick={() => openThread(item.id)}
-                    >
-                      <span
-                        className="admin-message-avatar"
-                        style={{ backgroundColor: getAvatarColor(item.email || item.nom || item.id) }}
-                      >
-                        {getAvatarLabel(item.nom, item.email)}
-                      </span>
-
-                      <span className="admin-message-preview-content">
-                        <span className="admin-message-preview-name">{item.sujet || 'Sans sujet'}</span>
-                        <span className="admin-message-preview-text">{item.message || '-'}</span>
-                      </span>
-
-                      <span className="admin-message-preview-side">
-                        <span className="admin-message-preview-time">{formatRelativeTime(item.createdAt)}</span>
-                        <span className="admin-message-unread-dot" />
-                      </span>
-                    </button>
-                  ))}
-                </aside>
-              </>
-            ) : (
-              <>
-                <header className="admin-thread-head-messenger">
-                  <div className="admin-thread-user">
-                    <button type="button" className="admin-back-btn" onClick={() => setIsThreadOpen(false)} aria-label="Retour">
-                      {'<'}
-                    </button>
-                    <span
-                      className="admin-message-avatar"
-                      style={{ backgroundColor: getAvatarColor(selectedContactMessage?.email || selectedContactMessage?.nom || selectedContactMessage?.id) }}
-                    >
-                      {getAvatarLabel(selectedContactMessage?.nom, selectedContactMessage?.email)}
-                    </span>
-                    <div>
-                      <p className="admin-thread-user-name">Admin conversation</p>
-                      <p className="admin-thread-user-meta">{selectedContactMessage?.sujet || 'Sans sujet'}</p>
-                    </div>
+                <div className="profile-modern-identity">
+                  <h1>{profile?.nom || 'Mon profil'}</h1>
+                  <p>{profile?.email || '-'}</p>
+                  <div className="profile-modern-chip-row">
+                    <span className="profile-modern-chip">{roleLabel}</span>
+                    <span className="profile-modern-chip is-green">{isVerified ? 'Actif' : 'Inactif'}</span>
+                    <span className="profile-modern-chip is-green">{isVerified ? 'Verifie' : 'Non verifie'}</span>
                   </div>
-                  <button type="button" className="admin-close-btn" onClick={closeMessenger} aria-label="Fermer">X</button>
+                </div>
+
+                <div className="profile-modern-actions">
+                  <button type="button" className="nav-btn primary-btn" onClick={handleOpenEditModal}>Modifier le profil</button>
+                </div>
+              </div>
+            </article>
+
+            {accountError ? <p className="profile-modern-feedback profile-modern-feedback-error">{accountError}</p> : null}
+            {accountSuccess ? <p className="profile-modern-feedback profile-modern-feedback-success">{accountSuccess}</p> : null}
+
+            <section className="profile-modern-stats">
+              <article className="profile-modern-stat-card">
+                <p className="profile-modern-stat-label">Membre depuis</p>
+                <strong>{memberSinceLabel}</strong>
+              </article>
+              <article className="profile-modern-stat-card">
+                <p className="profile-modern-stat-label">Role</p>
+                <strong>{roleLabel}</strong>
+              </article>
+              <article className="profile-modern-stat-card">
+                <p className="profile-modern-stat-label">Statut</p>
+                <strong>{isVerified ? 'Verifie' : 'Non verifie'}</strong>
+              </article>
+              <article className="profile-modern-stat-card">
+                <p className="profile-modern-stat-label">Contrat principal</p>
+                <strong>{numeroContratLabel}</strong>
+              </article>
+            </section>
+
+            <section className="profile-modern-panels">
+              <article className="profile-modern-panel">
+                <header className="profile-modern-panel-head">
+                  <h2>Informations personnelles</h2>
                 </header>
 
-                <article className="admin-message-thread">
-                  {!selectedContactMessage ? (
-                    <p className="auth-switch">Selectionnez un message.</p>
-                  ) : (
-                    <>
-                      <div className="admin-thread-body">
-                        <div className="admin-chat-bubble admin-chat-bubble-admin">
-                          <p>{selectedContactMessage.message || '-'}</p>
-                          <small>Vous · {formatDateTime(selectedContactMessage.createdAt)}</small>
-                        </div>
+                <div className="profile-mini-grid">
+                  <article className="profile-mini-card">
+                    <p>Nom d'utilisateur</p>
+                    <strong>{profileUsername}</strong>
+                  </article>
+                  <article className="profile-mini-card">
+                    <p>Adresse email</p>
+                    <strong>{profile?.email || '-'}</strong>
+                  </article>
+                  <article className="profile-mini-card">
+                    <p>Telephone</p>
+                    <strong>{telephoneLabel}</strong>
+                  </article>
+                  <article className="profile-mini-card">
+                    <p>CIN</p>
+                    <strong>{cinLabel}</strong>
+                  </article>
+                  <article className="profile-mini-card">
+                    <p>Numero de contrat</p>
+                    <strong>{numeroContratLabel}</strong>
+                  </article>
+                  <article className="profile-mini-card">
+                    <p>Role</p>
+                    <strong>{roleLabel}</strong>
+                  </article>
+                  <article className="profile-mini-card profile-mini-card-wide">
+                    <p>Statut du compte</p>
+                    <strong>{isVerified ? 'Verifie' : 'Non verifie'}</strong>
+                  </article>
+                </div>
+              </article>
 
-                        {messageReplies.map((reply) => (
-                          <div
-                            key={reply.id}
-                            className={`admin-chat-bubble ${reply.senderRole === 'UTILISATEUR' ? 'admin-chat-bubble-admin' : 'admin-chat-bubble-user'}`}
-                          >
-                            <p>{reply.message}</p>
-                            <small>{reply.senderRole === 'UTILISATEUR' ? 'Vous' : 'Admin'} · {formatDateTime(reply.createdAt)}</small>
-                          </div>
-                        ))}
-                      </div>
+              <article className="profile-modern-panel">
+                <header className="profile-modern-panel-head profile-modern-panel-head-split">
+                  <h2>Mes contrats</h2>
+                  <span className="profile-modern-message-count">{nombreContrats}</span>
+                </header>
 
-                      <form className="admin-thread-composer" onSubmit={handleSubmitReply}>
-                        <input
-                          type="text"
-                          placeholder="Votre message..."
-                          value={replyText}
-                          onChange={(event) => setReplyText(event.target.value)}
-                          required
-                        />
-                        <button type="submit" className="admin-send-btn" disabled={isReplySubmitting}>
-                          {isReplySubmitting ? '...' : 'Envoyer'}
-                        </button>
-                      </form>
-                    </>
-                  )}
-                </article>
-              </>
-            )}
+                <div className="profile-contract-list profile-contract-list-compact">
+                  {contrats.length === 0 ? <p className="auth-switch">Aucun contrat trouve.</p> : null}
+                  {contrats.slice(0, 4).map((contrat, index) => (
+                    <article
+                      key={`${contrat.numeroContrat || 'contrat'}-${index}`}
+                      className="profile-contract-item"
+                    >
+                      <p className="history-label">Numero</p>
+                      <p className="history-value">{contrat.numeroContrat || '-'}</p>
+                      <p className="history-label">Date fin</p>
+                      <p className="history-value">{formatDate(contrat.dateFinContrat)}</p>
+                      <p className="history-label">Statut</p>
+                      <span className={`history-status ${getContractStatusClass(contrat.statut)}`}>
+                        {contrat.statut || 'INCONNU'}
+                      </span>
+                      <p className="history-label">Type</p>
+                      <p className="history-value">{contrat.typeContrat || '-'}</p>
+                    </article>
+                  ))}
+                </div>
+              </article>
+            </section>
 
-            {messageError ? <p className="user-messenger-alert user-messenger-alert-error">{messageError}</p> : null}
-            {messageSuccess ? <p className="user-messenger-alert user-messenger-alert-success">{messageSuccess}</p> : null}
+            <section className="profile-history-section profile-modern-history">
+              <div className="profile-history-head">
+                <h2>Historique des sinistres</h2>
+                <Link to="/ma-voiture" className="nav-btn secondary-btn">
+                  Déclarer un sinistre
+                </Link>
+              </div>
+
+              <div className="profile-history-list">
+                {historiqueSinistres.map((sinistre) => (
+                  <article key={sinistre.reference} className="profile-history-item">
+                    <div>
+                      <p className="history-label">Reference</p>
+                      <p className="history-value">{sinistre.reference}</p>
+                    </div>
+                    <div>
+                      <p className="history-label">Date</p>
+                      <p className="history-value">{sinistre.date}</p>
+                    </div>
+                    <div>
+                      <p className="history-label">Type</p>
+                      <p className="history-value">{sinistre.type}</p>
+                    </div>
+                    <div>
+                      <p className="history-label">Statut</p>
+                      <span
+                        className={`history-status ${
+                          sinistre.statut === 'Clôturé' ? 'history-status-closed' : 'history-status-open'
+                        }`}
+                      >
+                        {sinistre.statut}
+                      </span>
+                    </div>
+                  </article>
+                ))}
+              </div>
+
+              <p className="auth-switch">
+                Retour à <Link to="/">l’accueil</Link>
+              </p>
+            </section>
+          </>
+        ) : null}
+      </section>
+
+      {isEditModalOpen ? (
+        <div className="admin-modal-overlay" onClick={() => setIsEditModalOpen(false)}>
+          <div className="admin-modal-card admin-modal-card-violet profile-edit-modal-card" onClick={(event) => event.stopPropagation()}>
+            <div className="admin-modal-header">
+              <div>
+                <h3>Modifier mon compte</h3>
+                <p>Mettez a jour vos informations personnelles.</p>
+              </div>
+              <button type="button" className="admin-modal-close" onClick={() => setIsEditModalOpen(false)}>X</button>
+            </div>
+
+            <form className="admin-modal-body admin-modal-form-grid" onSubmit={handleSubmitProfile}>
+              <label>
+                Nom
+                <input name="nom" value={profileForm.nom} onChange={handleProfileChange} required />
+              </label>
+              <label>
+                Email
+                <input name="email" type="email" value={profileForm.email} onChange={handleProfileChange} required />
+              </label>
+              <label>
+                Nouveau mot de passe
+                <input
+                  name="password"
+                  type="password"
+                  value={profileForm.password}
+                  onChange={handleProfileChange}
+                  placeholder="Laisser vide pour ne pas changer"
+                />
+              </label>
+              <label>
+                Telephone
+                <input name="telephone" value={profileForm.telephone} onChange={handleProfileChange} />
+              </label>
+              <label>
+                CIN
+                <input name="cin" value={profileForm.cin} onChange={handleProfileChange} />
+              </label>
+              <label>
+                Numero de contrat
+                <input name="numeroContrat" value={profileForm.numeroContrat} onChange={handleProfileChange} />
+              </label>
+
+              {accountError ? <p className="profile-modern-feedback profile-modern-feedback-error profile-modal-feedback">{accountError}</p> : null}
+
+              <div className="admin-modal-actions">
+                <button type="button" className="admin-modal-btn admin-modal-btn-neutral" onClick={() => setIsEditModalOpen(false)}>
+                  Annuler
+                </button>
+                <button type="submit" className="admin-modal-btn admin-modal-btn-primary" disabled={isSavingProfile}>
+                  {isSavingProfile ? 'Enregistrement...' : 'Enregistrer'}
+                </button>
+              </div>
+            </form>
           </div>
-        )}
-      </div>
+        </div>
+      ) : null}
     </main>
   )
 }

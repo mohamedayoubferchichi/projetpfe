@@ -54,6 +54,7 @@ public class AuthService {
         String nom = request.getNom() == null ? "" : request.getNom().trim();
         String email = request.getEmail() == null ? "" : request.getEmail().trim();
         String password = request.getPassword() == null ? "" : request.getPassword().trim();
+        String telephone = request.getTelephone() == null ? "" : request.getTelephone().trim();
         String cin = request.getCin() == null ? "" : request.getCin().trim();
         String numeroContrat = request.getNumeroContrat() == null ? "" : request.getNumeroContrat().trim();
 
@@ -69,6 +70,7 @@ public class AuthService {
         utilisateur.setNom(nom);
         utilisateur.setEmail(email);
         utilisateur.setPassword(passwordEncoder.encode(password));
+        utilisateur.setTelephone(StringUtils.hasText(telephone) ? telephone : null);
         utilisateur.setCin(StringUtils.hasText(cin) ? cin : null);
         utilisateur.setNumeroContrat(StringUtils.hasText(numeroContrat) ? numeroContrat : null);
         utilisateur.setRole("UTILISATEUR");
@@ -108,6 +110,7 @@ public class AuthService {
         response.setId(utilisateur.getId());
         response.setNom(utilisateur.getNom());
         response.setEmail(utilisateur.getEmail());
+        response.setTelephone(utilisateur.getTelephone());
         response.setCin(utilisateur.getCin());
         response.setNumeroContrat(utilisateur.getNumeroContrat());
         response.setRole(utilisateur.getRole());
